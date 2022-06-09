@@ -14,10 +14,13 @@ services:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: homework-3
+      APP_DB_USER: docker
+      APP_DB_PASS: docker
+      POSTGRES_MULTIPLE_DATABASES: comments,notification
     networks:
       - hmw_3_net
     volumes:
-       - pgdata:/var/lib/postgresql/data
+       - ./scripts/init-databases.sh:/docker-entrypoint-initdb.d/init-database.sh
 
   zookeeper:
     image: confluentinc/cp-zookeeper
@@ -96,10 +99,6 @@ services:
       - hmw_3_net
     volumes:
       - "./data/grafana:/var/lib/grafana"
-
-volumes:
-  pgdata:
-    driver: local
 
 networks:
   hmw_3_net:
