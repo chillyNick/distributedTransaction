@@ -100,6 +100,15 @@ services:
     volumes:
       - "./data/grafana:/var/lib/grafana"
 
+  mailcatcher:
+    restart: unless-stopped
+    image: dockage/mailcatcher:latest
+    ports:
+      - "1080:1080"
+      - "1025:1025"
+    networks:
+      - hmw_3_net
+
 networks:
   hmw_3_net:
     driver: bridge
