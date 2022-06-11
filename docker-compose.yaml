@@ -13,14 +13,47 @@ services:
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: homework-3
       APP_DB_USER: docker
       APP_DB_PASS: docker
       POSTGRES_MULTIPLE_DATABASES: comments,notification
+      SHARDED_DATABASE: 'comments'
+    depends_on:
+      - shard1
+      - shard2
     networks:
       - hmw_3_net
     volumes:
-       - ./scripts/init-databases.sh:/docker-entrypoint-initdb.d/init-database.sh
+       - ./scripts/postgres/main_init/:/docker-entrypoint-initdb.d
+
+  shard1:
+    image: postgres:latest
+    restart: always
+    ports:
+      - 5433:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: comments
+      SHARDED_TABLE: comment_1
+    volumes:
+      - ./scripts/postgres/shard_init/:/docker-entrypoint-initdb.d
+    networks:
+      - hmw_3_net
+
+  shard2:
+    image: postgres:latest
+    restart: always
+    ports:
+      - 5434:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: comments
+      SHARDED_TABLE: comment_2
+    volumes:
+      - ./scripts/postgres/shard_init/:/docker-entrypoint-initdb.d
+    networks:
+      - hmw_3_net
 
   zookeeper:
     image: confluentinc/cp-zookeeper

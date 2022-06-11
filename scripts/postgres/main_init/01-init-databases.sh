@@ -2,8 +2,6 @@
 set -e
 set -u
 
-export PGPASSWORD=$POSTGRES_PASSWORD;
-
 function createdatabase() {
 	local database=$1
 	echo "  Creating database '$database'"
