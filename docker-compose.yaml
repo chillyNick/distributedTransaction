@@ -23,7 +23,7 @@ services:
     networks:
       - hmw_3_net
     volumes:
-       - ./scripts/postgres/main_init/:/docker-entrypoint-initdb.d
+        - ./scripts/postgres/main_init/:/docker-entrypoint-initdb.d
 
   shard1:
     image: postgres:latest
@@ -139,6 +139,16 @@ services:
     ports:
       - "1080:1080"
       - "1025:1025"
+    networks:
+      - hmw_3_net
+
+  redis:
+    restart: unless-stopped
+    image: 'bitnami/redis:latest'
+    ports:
+      - 6379:6379
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
     networks:
       - hmw_3_net
 
