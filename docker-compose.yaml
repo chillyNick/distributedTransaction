@@ -1,0 +1,157 @@
+
+services:
+  postgres:
+    image: postgres:latest
+    healthcheck:
+      test: [ "CMD", "pg_isready", "-q", "-d", "postgres", "-U", "postgres" ]
+      timeout: 45s
+      interval: 10s
+      retries: 10
+    restart: always
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      APP_DB_USER: docker
+      APP_DB_PASS: docker
+      POSTGRES_MULTIPLE_DATABASES: comments,notification
+      SHARDED_DATABASE: 'comments'
+    depends_on:
+      - shard1
+      - shard2
+    networks:
+      - hmw_3_net
+    volumes:
+        - ./scripts/postgres/main_init/:/docker-entrypoint-initdb.d
+
+  shard1:
+    image: postgres:latest
+    restart: always
+    ports:
+      - 5433:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: comments
+      SHARDED_TABLE: comment_1
+    volumes:
+      - ./scripts/postgres/shard_init/:/docker-entrypoint-initdb.d
+    networks:
+      - hmw_3_net
+
+  shard2:
+    image: postgres:latest
+    restart: always
+    ports:
+      - 5434:5432
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: comments
+      SHARDED_TABLE: comment_2
+    volumes:
+      - ./scripts/postgres/shard_init/:/docker-entrypoint-initdb.d
+    networks:
+      - hmw_3_net
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper
+    restart: unless-stopped
+    ports:
+      - 2181:2181
+    environment:
+      zk_id: "1"
+      ZOOKEEPER_CLIENT_PORT: 32181
+      ZOOKEEPER_TICK_TIME: 2000
+      ZOOKEEPER_SYNC_LIMIT: 2
+    networks:
+      - hmw_3_net
+
+  kafka:
+    image: confluentinc/cp-kafka
+    restart: unless-stopped
+    depends_on:
+      - zookeeper
+    ports:
+      - 9094:9094
+    environment:
+      KAFKA_ZOOKEEPER_CONNECT: "zookeeper:32181"
+      KAFKA_LISTENERS: INTERNAL://kafka:9092,OUTSIDE://kafka:9094
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9092,OUTSIDE://localhost:9094
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,OUTSIDE:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - hmw_3_net
+
+  kafka-ui:
+    image: obsidiandynamics/kafdrop
+    restart: unless-stopped
+    depends_on:
+      - kafka
+    ports:
+      - 9001:9001
+    environment:
+      SERVER_PORT: 9001
+      KAFKA_BROKERCONNECT: "kafka:9092"
+      JVM_OPTS: "-Xms16M -Xmx48M -Xss180K -XX:-TieredCompilation -XX:+UseStringDeduplication -noverify"
+    networks:
+      - hmw_3_net
+
+  jaeger:
+    image: jaegertracing/all-in-one
+    restart: unless-stopped
+    ports:
+      - 6831:6831/udp
+      - 16686:16686
+    networks:
+      - hmw_3_net
+
+  prometheus:
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    ports:
+      - 9090:9090
+    networks:
+      - hmw_3_net
+    volumes:
+      - "./prometheus.yml:/etc/prometheus/prometheus.yml"
+
+  grafana:
+    image: grafana/grafana:latest
+    restart: unless-stopped
+    ports:
+      - 3000:3000
+    links:
+      - prometheus
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=MYPASSWORT
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - hmw_3_net
+    volumes:
+      - "./data/grafana:/var/lib/grafana"
+
+  mailcatcher:
+    restart: unless-stopped
+    image: dockage/mailcatcher:latest
+    ports:
+      - "1080:1080"
+      - "1025:1025"
+    networks:
+      - hmw_3_net
+
+  redis:
+    restart: unless-stopped
+    image: 'bitnami/redis:latest'
+    ports:
+      - 6379:6379
+    environment:
+      - ALLOW_EMPTY_PASSWORD=yes
+    networks:
+      - hmw_3_net
+
+networks:
+  hmw_3_net:
+    driver: bridge

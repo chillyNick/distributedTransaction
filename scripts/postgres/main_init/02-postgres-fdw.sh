@@ -1,0 +1,13 @@
+#!/bin/bash
+set -e
+set -u
+
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$SHARDED_DATABASE" <<-EOSQL
+  CREATE EXTENSION postgres_fdw;
+
+  CREATE SERVER shard1 FOREIGN DATA WRAPPER postgres_fdw OPTIONS (host 'shard1', port '5432', dbname '$SHARDED_DATABASE');
+  CREATE SERVER shard2 FOREIGN DATA WRAPPER postgres_fdw OPTIONS (host 'shard2', port '5432', dbname '$SHARDED_DATABASE');
+
+  CREATE USER MAPPING FOR $APP_DB_USER SERVER shard1 OPTIONS (user '$POSTGRES_USER', password '$POSTGRES_PASSWORD');
+  CREATE USER MAPPING FOR $APP_DB_USER SERVER shard2 OPTIONS (user '$POSTGRES_USER', password '$POSTGRES_PASSWORD');
+EOSQL
