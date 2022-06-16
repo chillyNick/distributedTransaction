@@ -1,3 +1,5 @@
-# Scheme of Ozon and services with distributed transaction
+# Docker compose for services with distributed transaction
 
-https://miro.com/app/board/uXjVOxw-1NI=/?share_link_id=271657964282
+1. comments service - https://github.com/chillyNick/comments
+2. moderation service - https://github.com/chillyNick/moderation
+3. notification service - https://github.com/chillyNick/notification
